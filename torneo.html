@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Torneo en vivo</title>
+<meta name="theme-color" content="#0f4c5c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23f2b134'/><path d='M50 4a46 46 0 0 1 0 92M8 34c30 6 56 30 62 60M30 10c22 18 30 46 26 84' stroke='%230f4c5c' stroke-width='6' fill='none'/></svg>">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="./"><span class="brand-dot"></span><span id="site"></span></a>
+      <div class="updated"><span id="upd">Cargando…</span><button class="icon-btn" id="refresh" aria-label="Actualizar">↻</button></div>
+    </div>
+    <h1 id="tname">&nbsp;</h1>
+    <div class="meta" id="tmeta"></div>
+  </div>
+</header>
+<div class="wrap">
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="partidos" aria-selected="true">Partidos</button>
+    <button class="tab" role="tab" data-tab="posiciones">Posiciones</button>
+    <button class="tab" role="tab" data-tab="llave">Llave</button>
+    <button class="tab" role="tab" data-tab="equipos">Equipos</button>
+    <button class="tab" role="tab" data-tab="info">Info</button>
+  </nav>
+  <main id="view"></main>
+</div>
+<footer class="wrap">Resultados actualizados automáticamente · <span id="site2"></span></footer>
+<script type="module" src="js/public.js"></script>
+</body>
+</html>

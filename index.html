@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Torneos Tesalia</title>
+<meta name="theme-color" content="#0f4c5c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23f2b134'/><path d='M50 4a46 46 0 0 1 0 92M8 34c30 6 56 30 62 60M30 10c22 18 30 46 26 84' stroke='%230f4c5c' stroke-width='6' fill='none'/></svg>">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="top"><span class="brand"><span class="brand-dot"></span><span id="site"></span></span><a class="icon-btn" href="admin.html" style="text-decoration:none">Organizador</a></div>
+    <h1>Torneos y resultados en vivo</h1>
+    <div class="meta"><span>Fixture, posiciones y llaves actualizadas en tiempo real</span></div>
+  </div>
+</header>
+<div class="wrap"><main id="list" style="padding-top:0"></main></div>
+<footer class="wrap" id="foot"></footer>
+<script type="module">
+import { SITE_NAME } from "./js/config.js";
+import * as db from "./js/data.js";
+import { seedDemoIfEmpty } from "./js/demo.js";
+import { esc, STATUS_LABEL } from "./js/ui.js";
+document.getElementById("site").textContent = SITE_NAME;
+document.getElementById("foot").textContent = SITE_NAME;
+document.title = SITE_NAME;
+if (db.DEMO) { document.body.insertAdjacentHTML("beforeend", `<div class="demo-flag">MODO DEMO</div>`); await seedDemoIfEmpty(); }
+const el = document.getElementById("list");
+try {
+  const ts = (await db.listTournaments()).filter(t => t.status !== "borrador");
+  const order = { en_curso: 0, inscripciones: 1, finalizado: 2 };
+  ts.sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3));
+  el.innerHTML = ts.length ? `<div class="grid two" style="margin-top:-28px;position:relative;z-index:2">${ts.map(t => `
+    <a class="card t-card" href="torneo.html?t=${encodeURIComponent(t.slug)}">
+      <span class="status ${t.status}">${esc(STATUS_LABEL[t.status])}</span>
+      <h3 style="margin-top:8px">${esc(t.name)}</h3>
+      <div class="note">${esc(t.sport || "")}${t.location ? " · " + esc(t.location) : ""}</div>
+    </a>`).join("")}</div>` : `<div class="card empty" style="margin-top:-28px;position:relative">No hay torneos publicados todavía.</div>`;
+} catch (e) { el.innerHTML = `<div class="card empty">No se pudo cargar. Revisa tu conexión.</div>`; }
+</script>
+</body>
+</html>
