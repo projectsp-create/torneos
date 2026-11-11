@@ -63,6 +63,19 @@ export function standingsTable(rows, qualIds) {
       <td class="pts">${r.pts}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
+export function generalTableHTML(rows, qualIds, byeIds = new Set()) {
+  if (!rows.length) return `<div class="empty">Sin equipos</div>`;
+  return `<div class="table-wrap"><table class="st">
+    <thead><tr><th>#</th><th class="team">Equipo</th><th class="hide-sm">Gr.</th><th>PJ</th><th>PG</th><th class="hide-sm">PP</th>
+    <th class="hide-sm" title="Sets a favor">SF</th><th class="hide-sm" title="Sets en contra">SC</th><th title="Diferencia de sets">DS</th>
+    <th class="hide-sm" title="Puntos a favor">PF</th><th class="hide-sm" title="Puntos en contra">PC</th><th title="Diferencia de puntos">DP</th><th>PTS</th></tr></thead>
+    <tbody>${rows.map(r => `<tr class="${qualIds.has(r.team.id) ? "q" : ""}">
+      <td><span class="pos">${r.gpos}</span></td><td class="team">${esc(r.team.name)}${byeIds.has(r.team.id) ? ' <span class="bye">directo</span>' : ""}</td><td class="hide-sm">${esc(r.group)}</td>
+      <td>${r.pj}</td><td>${r.pg}</td><td class="hide-sm">${r.pp}</td><td class="hide-sm">${r.sf}</td><td class="hide-sm">${r.sc}</td>
+      <td>${r.ds > 0 ? "+" : ""}${r.ds}</td><td class="hide-sm">${r.pf}</td><td class="hide-sm">${r.pc}</td><td>${r.dp > 0 ? "+" : ""}${r.dp}</td>
+      <td class="pts">${r.pts}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
 export function bracketView(resolved, teamsById, c) {
   const ko = resolved.filter(m => m.phase !== "grupos");
   if (!ko.length) return "";

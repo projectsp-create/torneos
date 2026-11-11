@@ -3,11 +3,12 @@
 
 export const DEFAULT_CONFIG = {
   bestOf: 3,               // mejor de 3 sets
-  groupSetPoints: 15,      // sets de fase de grupos a 15
+  groupSetPoints: 21,      // sets de fase de grupos a 21
   koSetPoints: 21,         // sets de eliminatorias a 21
-  lastSetPoints: 15,       // set decisivo a 15
+  lastSetPoints: 11,       // set decisivo (3.º) a 11
   tablePoints: { winClean: 3, winClose: 2, lossClose: 1, lossClean: 0 },
-  qualifiers: 8,
+  koMode: "general",       // "general": llave por tabla general · "grupos": mejores de cada grupo
+  qualifiers: 15,          // equipos que pasan a la llave
   thirdPlace: true,
   courts: ["Cancha 1", "Cancha 2"],
   days: [
@@ -137,8 +138,19 @@ export function groupsComplete(matches) {
   return g.length > 0 && g.every(isDone);
 }
 
-// Clasificados: los k primeros de cada grupo + mejores (k+1)-ésimos hasta completar Q.
-export function qualifiers(st, Q) {
+// Tabla general: todos los equipos juntos (PTS → dif. sets → dif. puntos).
+export function generalTable(st) {
+  const all = st.groups.flatMap(g => st.byGroup[g]);
+  all.sort((x, y) => y.pts - x.pts || y.ds - x.ds || y.dp - x.dp || y.pf - x.pf ||
+    (x.team.sort_order - y.team.sort_order) || x.team.name.localeCompare(y.team.name));
+  return all.map((r, i) => ({ ...r, gpos: i + 1 }));
+}
+
+// Clasificados a la llave, ya sembrados (seed 1 = mejor).
+export function qualifiers(st, c) {
+  const Q = typeof c === "number" ? c : c.qualifiers;
+  const mode = typeof c === "number" ? "grupos" : (c.koMode || "grupos");
+  if (mode === "general") return generalTable(st).slice(0, Q).map((r, i) => ({ ...r, seed: i + 1 }));
   const G = st.groups.length;
   if (!G) return [];
   const k = Math.min(Math.floor(Q / G), Math.max(...st.groups.map(g => st.byGroup[g].length)));
@@ -155,6 +167,12 @@ export function qualifiers(st, Q) {
   const list = direct.concat(extra.slice(0, Math.max(0, Q - direct.length)));
   list.sort(cmp);
   return list.map((r, i) => ({ ...r, seed: i + 1 }));
+}
+
+// Sembrados que pasan directo a la 2.ª ronda (cuando los clasificados no completan la llave).
+export function byeTeams(quals) {
+  let size = 2; while (size < quals.length) size *= 2;
+  return new Set(quals.filter(r => size + 1 - r.seed > quals.length).map(r => r.team.id));
 }
 
 // ---------------------------------------------------------------- fixture
@@ -242,62 +260,57 @@ export function generateGroupFixture(teams, c, tz) {
   return out;
 }
 
-const SEED_ORDER = {
-  2: [1, 2], 4: [1, 4, 2, 3], 8: [1, 8, 4, 5, 2, 7, 3, 6],
-  16: [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11],
-};
+// Orden estándar de siembra para una llave de tamaño n (1 vs n, 8 vs 9, ...).
+export function seedOrder(n) {
+  let o = [1, 2];
+  while (o.length < n) { const m = o.length * 2 + 1; o = o.flatMap(s => [s, m - s]); }
+  return o;
+}
 const PHASE_BY_SIZE = { 16: "octavos", 8: "cuartos", 4: "semifinal", 2: "final" };
 const CODE_PREFIX = { octavos: "O", cuartos: "C", semifinal: "S" };
 
-// Genera la llave de eliminación a partir de los clasificados sembrados.
+// Genera la llave. Si los clasificados no son potencia de 2, los mejores
+// sembrados pasan directo a la siguiente ronda (ej. 15 equipos: el 1.º pasa a cuartos).
 export function generateKnockout(quals, c, tz, startISO) {
   const Q = quals.length;
-  const order = SEED_ORDER[Q];
-  if (!order) throw new Error("La llave debe tener 2, 4, 8 o 16 equipos.");
+  if (Q < 2 || Q > 16) throw new Error("La llave debe tener entre 2 y 16 equipos.");
+  let size = 2; while (size < Q) size *= 2;
+  const order = seedOrder(size);
   const bySeed = Object.fromEntries(quals.map(q => [q.seed, q.team]));
   const C = c.courts.length || 1;
   const out = [];
-  let size = Q, prevCodes = null, n = 0;
-  let cursor = startISO ? new Date(startISO) : null;
+  let n = 0, cursor = startISO ? new Date(startISO) : null;
   const iso = d => d ? toLocalISO(d, tz) : null;
   const addMin = (d, m) => d ? new Date(d.getTime() + m * 60000) : null;
-
+  // "slots" de la ronda actual: {team} si ya está definido, {src} si sale de un partido
+  let slots = order.map(sd => (sd <= Q ? { team: bySeed[sd].id } : null));
   while (size >= 2) {
     const phase = PHASE_BY_SIZE[size];
-    const games = size / 2;
-    const codes = [];
-    const roundMatches = [];
-    for (let i = 0; i < games; i++) {
-      const code = phase === "final" ? "F" : `${CODE_PREFIX[phase]}${i + 1}`;
-      codes.push(code);
+    const games = [], next = [];
+    let k = 0;
+    for (let i = 0; i < size / 2; i++) {
+      const a = slots[2 * i], b = slots[2 * i + 1];
+      if (!a || !b) { next.push(a || b); continue; }        // pase directo
+      k++;
+      const code = phase === "final" ? "F" : `${CODE_PREFIX[phase]}${k}`;
       const m = { code, phase, sets: [], status: "pendiente", court: null, scheduled_at: null };
-      if (!prevCodes) {
-        m.home_team_id = bySeed[order[2 * i]].id; m.away_team_id = bySeed[order[2 * i + 1]].id;
-      } else {
-        m.home_source = `W:${prevCodes[2 * i]}`; m.away_source = `W:${prevCodes[2 * i + 1]}`;
-      }
-      roundMatches.push(m);
+      if (a.team) m.home_team_id = a.team; else m.home_source = a.src;
+      if (b.team) m.away_team_id = b.team; else m.away_source = b.src;
+      games.push(m); next.push({ src: `W:${code}` });
     }
-    if (phase === "final" && c.thirdPlace && prevCodes) {
-      roundMatches.unshift({ code: "3P", phase: "tercero", sets: [], status: "pendiente",
-        home_source: `L:${prevCodes[0]}`, away_source: `L:${prevCodes[1]}` });
+    if (phase === "final" && c.thirdPlace && out.some(m => m.phase === "semifinal")) {
+      const semis = out.filter(m => m.phase === "semifinal");
+      games.unshift({ code: "3P", phase: "tercero", sets: [], status: "pendiente",
+        home_source: `L:${semis[0].code}`, away_source: `L:${semis[1].code}` });
     }
-    // horario: tercer puesto y final van solos, uno tras otro
     if (phase === "final") {
-      for (const m of roundMatches) {
-        m.court = c.courts[0]; m.scheduled_at = iso(cursor); cursor = addMin(cursor, c.koMatchMin);
-      }
+      for (const m of games) { m.court = c.courts[0]; m.scheduled_at = iso(cursor); cursor = addMin(cursor, c.koMatchMin); }
     } else {
-      roundMatches.forEach((m, i) => {
-        const slot = Math.floor(i / C);
-        m.court = c.courts[i % C];
-        m.scheduled_at = iso(addMin(cursor, slot * c.koMatchMin));
-      });
-      cursor = addMin(cursor, Math.ceil(games / C) * c.koMatchMin);
+      games.forEach((m, i) => { m.court = c.courts[i % C]; m.scheduled_at = iso(addMin(cursor, Math.floor(i / C) * c.koMatchMin)); });
+      cursor = addMin(cursor, Math.ceil(games.length / C) * c.koMatchMin);
     }
-    roundMatches.forEach(m => { n++; m.sort_order = 1000 + n; out.push(m); });
-    prevCodes = codes;
-    size /= 2;
+    games.forEach(m => { n++; m.sort_order = 1000 + n; out.push(m); });
+    slots = next; size /= 2;
   }
   return out;
 }

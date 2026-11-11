@@ -1,13 +1,13 @@
 import { SITE_NAME } from "./config.js";
 import * as db from "./data.js";
-import { cfg, standings, qualifiers, resolveTeams, isDone, groupsComplete } from "./logic.js";
-import { esc, fmtDay, dayKey, matchCard, standingsTable, bracketView, money, STATUS_LABEL } from "./ui.js";
+import { cfg, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete } from "./logic.js";
+import { esc, fmtDay, dayKey, matchCard, standingsTable, generalTableHTML, bracketView, money, STATUS_LABEL } from "./ui.js";
 import { seedDemoIfEmpty } from "./demo.js";
 
 const params = new URLSearchParams(location.search);
 const slug = params.get("t");
 const REFRESH_MS = 20000;
-let T = null, teams = [], matches = [], tab = location.hash.slice(1) || "partidos", filter = "proximos", lastLoad = 0;
+let T = null, teams = [], matches = [], tab = location.hash.slice(1) || "partidos", filter = "proximos", tableView = "general", lastLoad = 0;
 
 document.getElementById("site").textContent = SITE_NAME;
 document.getElementById("site2").textContent = SITE_NAME;
@@ -55,6 +55,7 @@ function render() {
   else if (tab === "equipos") v.innerHTML = viewTeams();
   else v.innerHTML = viewInfo(c);
   v.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { filter = b.dataset.filter; render(); });
+  v.querySelectorAll("[data-tv]").forEach(b => b.onclick = () => { tableView = b.dataset.tv; render(); });
 }
 
 function viewMatches(resolved, byId, c) {
@@ -82,20 +83,27 @@ function viewMatches(resolved, byId, c) {
 function viewStandings(c) {
   const st = standings(teams, matches, c);
   if (!st.groups.length || st.groups.every(g => !g)) return `<div class="card empty" style="margin-top:18px">Los grupos se publicarán pronto.</div>`;
-  const q = new Set(qualifiers(st, c.qualifiers).map(r => r.team.id));
+  const quals = qualifiers(st, c);
+  const q = new Set(quals.map(r => r.team.id));
+  const byes = byeTeams(quals);
   const done = groupsComplete(matches);
-  return `${done ? `<div class="banner ok">✔ Fase de grupos terminada</div>` : `<div class="banner">Posiciones provisionales: la fase de grupos sigue en juego.</div>`}
-    <div class="grid two">${st.groups.map(g => `<section class="card group-card"><h3>Grupo ${esc(g)}</h3>${standingsTable(st.byGroup[g], q)}</section>`).join("")}</div>
-    <div class="legend"><i></i> Clasifica a eliminatorias (${c.qualifiers} equipos) · PTS: victoria ${c.tablePoints.winClean}/${c.tablePoints.winClose}, derrota ${c.tablePoints.lossClose}/${c.tablePoints.lossClean} · DS: dif. sets · DP: dif. puntos</div>`;
+  const seg = `<div class="seg">${[["general", "Tabla general"], ["grupos", "Por grupos"]].map(([k, l]) => `<button data-tv="${k}" aria-pressed="${tableView === k}">${l}</button>`).join("")}</div>`;
+  const body = tableView === "general"
+    ? `<section class="card group-card"><h3>Tabla general</h3>${generalTableHTML(generalTable(st), q, byes)}</section>`
+    : `<div class="grid two">${st.groups.map(g => `<section class="card group-card"><h3>Grupo ${esc(g)}</h3>${standingsTable(st.byGroup[g], q)}</section>`).join("")}</div>`;
+  return `<div class="section-title" style="margin-top:6px">${seg}</div>
+    ${done ? `<div class="banner ok">✔ Fase de grupos terminada</div>` : `<div class="banner">Posiciones provisionales: la fase de grupos sigue en juego.</div>`}
+    ${body}
+    <div class="legend"><i></i> Clasifica a la llave · PTS: gana 2-0 = ${c.tablePoints.winClean}, gana 2-1 = ${c.tablePoints.winClose}, pierde 1-2 = ${c.tablePoints.lossClose}, pierde 0-2 = ${c.tablePoints.lossClean} · Orden: PTS → DS → DP</div>`;
 }
 
 function viewBracket(resolved, byId, c) {
   const b = bracketView(resolved, byId, c);
   if (!b) {
     const st = standings(teams, matches, c);
-    const q = qualifiers(st, c.qualifiers);
+    const q = qualifiers(st, c);
     return `<div class="section-title"><h2>Clasificados hoy</h2><span class="sub">Así quedaría la llave si los grupos terminaran ahora</span></div>
-      <div class="card">${q.length ? `<table class="st"><thead><tr><th>Siembra</th><th class="team">Equipo</th><th>Grupo</th><th>Pos.</th><th>PTS</th></tr></thead><tbody>
+      <div class="card">${q.length ? `<table class="st"><thead><tr><th>Siembra</th><th class="team">Equipo</th><th>Grupo</th><th>Pos. grupo</th><th>PTS</th></tr></thead><tbody>
       ${q.map(r => `<tr><td><span class="pos">${r.seed}</span></td><td class="team">${esc(r.team.name)}</td><td>${esc(r.group)}</td><td>${r.pos}.º</td><td class="pts">${r.pts}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Sin datos todavía</div>`}</div>`;
   }
   return `<div class="section-title"><h2>Eliminatorias</h2><span class="sub">Desliza para ver todas las fases →</span></div>${b}`;
@@ -117,7 +125,7 @@ function viewInfo(c) {
     <dt>Eliminatorias</dt><dd>${fmtSets} a ${c.koSetPoints} puntos${c.bestOf > 1 ? ` (set decisivo a ${c.lastSetPoints})` : ""}</dd>
     <dt>Puntos en tabla</dt><dd>Gana ${c.bestOf > 1 ? `sin ceder set ${tp.winClean} · gana cediendo set ${tp.winClose} · pierde ganando set ${tp.lossClose} · ` : ""}pierde ${tp.lossClean}</dd>
     <dt>Desempate</dt><dd>Puntos → dif. de sets → dif. de puntos → resultado entre ellos</dd>
-    <dt>Clasifican</dt><dd>${c.qualifiers} equipos a eliminatorias${c.thirdPlace ? " · hay partido por el 3.er puesto" : ""}</dd>
+    <dt>Clasifican</dt><dd>${c.koMode === "general" ? `Los ${c.qualifiers} primeros de la tabla general (1 vs ${c.qualifiers}, 2 vs ${c.qualifiers - 1}…; si no completan llave, los mejores pasan directo)` : `${c.qualifiers} equipos (mejores de cada grupo)`}${c.thirdPlace ? " · hay partido por el 3.er puesto" : ""}</dd>
     <dt>Jugadores</dt><dd>${c.playersPerTeam} inscritos, ${c.playersOnCourt} en cancha</dd>
     ${c.fee ? `<dt>Inscripción</dt><dd>${money(c.fee)} por equipo</dd>` : ""}
     ${c.prizes?.length ? `<dt>Premiación</dt><dd>${c.prizes.map((p, i) => `${["🏆", "🥈", "🥉"][i] || ""} ${p}%`).join(" · ")} de la bolsa</dd>` : ""}

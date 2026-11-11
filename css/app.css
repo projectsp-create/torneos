@@ -166,3 +166,8 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px
 .status.finalizado { background: var(--ok-bg); color: var(--ok); }
 .status.borrador { background: var(--surface-2); color: var(--muted); }
 .demo-flag { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; z-index: 50; box-shadow: var(--shadow); }
+
+.bye { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; background: var(--warn-bg); color: var(--warn); padding: 1px 6px; border-radius: 999px; margin-left: 4px; vertical-align: middle; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }

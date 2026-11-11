@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG, generateGroupFixture } from "./logic.js";
 import { TZ_OFFSET } from "./config.js";
 
 export const VOLEY_2026_TEAMS = [
-  ["GALACTICOS", "A"], ["TEAM ELITE", "A"], ["COLPAI VOLEY", "A"], ["FLEX ZOOM", "A"], ["LOS MISMOS", "A"],
+  ["GALACTICOS", "A"], ["TEAM ELITE", "A"], ["COLPAI VOLEY", "A"], ["FLEX ZONE", "A"], ["LOS MISMOS", "A"],
   ["TEAM PALMA", "B"], ["FENIX VOLEY", "B"], ["LOS AMIGOS DE CHAPA", "B"], ["LA ESQUINA BISTRO", "B"], ["KIRK VAN VOLEY", "B"],
   ["TALENTO EN PAUSA", "C"], ["TINA VOLEY", "C"], ["LOS CUMBES", "C"], ["PONYS SALVAJES", "C"], ["MALAS RODILLAS", "C"],
 ];

@@ -1,10 +1,10 @@
 import { SITE_NAME, TZ_OFFSET } from "./config.js";
 import * as db from "./data.js";
 import {
-  cfg, DEFAULT_CONFIG, standings, qualifiers, resolveTeams, isDone, groupsComplete, setsWon,
+  cfg, DEFAULT_CONFIG, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete, setsWon,
   validateSets, generateGroupFixture, generateKnockout, toLocalISO, slugify, PHASE_LABEL, KO_PHASES, winnerSide,
 } from "./logic.js";
-import { esc, fmtDay, fmtTime, money, STATUS_LABEL, bracketView, standingsTable, toast, teamName } from "./ui.js";
+import { esc, fmtDay, fmtTime, money, STATUS_LABEL, bracketView, standingsTable, generalTableHTML, toast, teamName } from "./ui.js";
 import { seedDemoIfEmpty } from "./demo.js";
 
 const app = document.getElementById("app");
@@ -430,7 +430,8 @@ function panePlayers(pane) {
 function paneBracket(pane) {
   const c = cfg(S.T), teams = byId();
   const st = standings(S.teams, S.matches, c);
-  const q = qualifiers(st, c.qualifiers);
+  const q = qualifiers(st, c);
+  const byes = byeTeams(q);
   const done = groupsComplete(S.matches);
   const ko = S.matches.filter(m => m.phase !== "grupos");
   const koPlayed = ko.filter(isDone).length;
@@ -442,9 +443,9 @@ function paneBracket(pane) {
   ${done ? `<div class="banner ok">✔ Fase de grupos terminada: la llave usará las posiciones definitivas.</div>` : `<div class="banner">La fase de grupos no ha terminado: si generas la llave ahora, usará las posiciones provisionales.</div>`}
   <div class="grid two">
     <section class="card"><div class="form" style="padding-bottom:0"><h3>Clasificados (${q.length})</h3></div>
-      <table class="st"><thead><tr><th>Siembra</th><th class="team">Equipo</th><th>Grupo</th><th>Pos.</th><th>PTS</th><th>DS</th></tr></thead><tbody>
-      ${q.map(r => `<tr><td><span class="pos">${r.seed}</span></td><td class="team">${esc(r.team.name)}</td><td>${esc(r.group)}</td><td>${r.pos}.º</td><td class="pts">${r.pts}</td><td>${r.ds}</td></tr>`).join("")}</tbody></table>
-      <p class="note" style="padding:0 14px">Siembra: 1 vs ${c.qualifiers}, ${c.qualifiers / 2} vs ${c.qualifiers / 2 + 1}… Si hay empate total, revisa el resultado entre ellos.</p>
+      <table class="st"><thead><tr><th>Siembra</th><th class="team">Equipo</th><th>Grupo</th><th>PTS</th><th>DS</th><th>DP</th></tr></thead><tbody>
+      ${q.map(r => `<tr><td><span class="pos">${r.seed}</span></td><td class="team">${esc(r.team.name)}${byes.has(r.team.id) ? ' <span class="bye">directo</span>' : ""}</td><td>${esc(r.group)}</td><td class="pts">${r.pts}</td><td>${r.ds}</td><td>${r.dp}</td></tr>`).join("")}</tbody></table>
+      <p class="note" style="padding:0 14px">${c.koMode === "general" ? "Siembra por tabla general" : "Siembra por posición en grupo"}: 1 vs último, 2 vs penúltimo… ${byes.size ? `Pasan directo a la 2.ª ronda: ${byes.size}.` : ""} Si hay empate total, revisa el resultado entre ellos.</p>
     </section>
     <section class="card form"><h3>Generar llave</h3>
       <label class="f">Hora de inicio de eliminatorias<input class="i" type="datetime-local" id="kst" value="${toLocalInput(defStart)}"></label>
@@ -454,10 +455,12 @@ function paneBracket(pane) {
     </section>
   </div>
   ${ko.length ? `<div class="section-title"><h2>Vista previa</h2></div>${bracketView(resolved, teams, c)}` : ""}
-  <div class="section-title"><h2>Posiciones</h2></div>
+  <div class="section-title"><h2>Tabla general</h2></div>
+  <section class="card">${generalTableHTML(generalTable(st), qs, byes)}</section>
+  <div class="section-title"><h2>Por grupos</h2></div>
   <div class="grid two">${st.groups.filter(Boolean).map(g => `<section class="card group-card"><h3>Grupo ${esc(g)}</h3>${standingsTable(st.byGroup[g], qs)}</section>`).join("")}</div>`;
   $("#gk", pane).onclick = async () => {
-    if (![2, 4, 8, 16].includes(q.length)) return toast("Se necesitan 2, 4, 8 o 16 clasificados", "err");
+    if (q.length < 2 || q.length > 16) return toast("La llave admite de 2 a 16 equipos", "err");
     if (ko.length && !confirm(`Se reemplazará la llave actual${koPlayed ? ` (¡con ${koPlayed} partidos jugados!)` : ""}. ¿Continuar?`)) return;
     const start = fromLocalInput($("#kst", pane).value);
     await guard(async () => {
@@ -509,7 +512,8 @@ function paneConfig(pane) {
       ${num("lossClean", tp.lossClean, "Pts: pierde sin ganar set")}
     </div>
     <div class="row">
-      <label class="f">Clasificados a la llave<select class="i" name="qualifiers">${[2, 4, 8, 16].map(n => `<option ${c.qualifiers === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+      <label class="f">Cómo se arma la llave<select class="i" name="koMode"><option value="general" ${c.koMode === "general" ? "selected" : ""}>Por tabla general</option><option value="grupos" ${c.koMode !== "general" ? "selected" : ""}>Mejores de cada grupo</option></select></label>
+      ${num("qualifiers", c.qualifiers, "Equipos que pasan a la llave", 'min="2" max="16"')}
       <label class="f">Partido por 3.er puesto<select class="i" name="thirdPlace"><option value="1" ${c.thirdPlace ? "selected" : ""}>Sí</option><option value="0" ${!c.thirdPlace ? "selected" : ""}>No</option></select></label>
       ${num("playersPerTeam", c.playersPerTeam, "Jugadores inscritos por equipo")}
       ${num("playersOnCourt", c.playersOnCourt, "Jugadores en cancha")}
@@ -544,7 +548,7 @@ function paneConfig(pane) {
       groupMatchMin: n("groupMatchMin"), koMatchMin: n("koMatchMin"), koBreakMin: n("koBreakMin"),
       bestOf: n("bestOf"), groupSetPoints: n("groupSetPoints"), koSetPoints: n("koSetPoints"), lastSetPoints: n("lastSetPoints"),
       tablePoints: { winClean: n("winClean"), winClose: n("winClose"), lossClose: n("lossClose"), lossClean: n("lossClean") },
-      qualifiers: n("qualifiers"), thirdPlace: f.get("thirdPlace") === "1",
+      koMode: f.get("koMode"), qualifiers: Math.min(16, Math.max(2, n("qualifiers"))), thirdPlace: f.get("thirdPlace") === "1",
       playersPerTeam: n("playersPerTeam"), playersOnCourt: n("playersOnCourt"),
       fee: n("fee"), prizes: [n("p1"), n("p2"), n("p3")], rules: f.get("rules"),
     };
