@@ -1,7 +1,7 @@
-import { SITE_NAME } from "./config.js";
+import { SITE_NAME, TZ_OFFSET } from "./config.js";
 import * as db from "./data.js";
-import { cfg, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete } from "./logic.js";
-import { esc, fmtDay, dayKey, matchCard, standingsTable, generalTableHTML, bracketView, money, STATUS_LABEL } from "./ui.js";
+import { cfg, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete, generateKnockout } from "./logic.js";
+import { esc, fmtDay, dayKey, matchCard, standingsTable, generalTableHTML, bracketView, downloadBracket, money, STATUS_LABEL } from "./ui.js";
 import { seedDemoIfEmpty } from "./demo.js";
 
 const params = new URLSearchParams(location.search);
@@ -98,15 +98,23 @@ function viewStandings(c) {
 }
 
 function viewBracket(resolved, byId, c) {
-  const b = bracketView(resolved, byId, c);
-  if (!b) {
-    const st = standings(teams, matches, c);
-    const q = qualifiers(st, c);
-    return `<div class="section-title"><h2>Clasificados hoy</h2><span class="sub">Así quedaría la llave si los grupos terminaran ahora</span></div>
-      <div class="card">${q.length ? `<table class="st"><thead><tr><th>Siembra</th><th class="team">Equipo</th><th>Grupo</th><th>Pos. grupo</th><th>PTS</th></tr></thead><tbody>
-      ${q.map(r => `<tr><td><span class="pos">${r.seed}</span></td><td class="team">${esc(r.team.name)}</td><td>${esc(r.group)}</td><td>${r.pos}.º</td><td class="pts">${r.pts}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">Sin datos todavía</div>`}</div>`;
+  const st = standings(teams, matches, c);
+  const q = qualifiers(st, c);
+  const seeds = Object.fromEntries(q.map(r => [r.team.id, r.seed]));
+  const generated = resolved.some(m => m.phase !== "grupos");
+  let data = resolved, note = "";
+  if (!generated) {
+    if (q.length < 2) return `<div class="card empty" style="margin-top:18px">La llave aparecerá cuando haya equipos y resultados.</div>`;
+    data = resolveTeams(generateKnockout(q, c, TZ_OFFSET, null).map((m, i) => ({ ...m, id: "p" + i })), c);
+    note = `<div class="banner">Proyección: así quedarían los cruces si la fase de grupos terminara hoy. Cambia con cada resultado.</div>`;
   }
-  return `<div class="section-title"><h2>Eliminatorias</h2><span class="sub">Desliza para ver todas las fases →</span></div>${b}`;
+  const b = bracketView(data, byId, c, { seeds, title: T.name });
+  setTimeout(() => { const btn = document.getElementById("dlb"); if (btn) btn.onclick = async () => {
+    btn.disabled = true; btn.textContent = "Generando…";
+    try { await downloadBracket(`llave-${T.slug}`); } catch { alert("No se pudo generar la imagen"); }
+    btn.disabled = false; btn.textContent = "⬇ Descargar imagen"; }; }, 0);
+  return `<div class="section-title"><h2>${generated ? "Eliminatorias" : "Llave proyectada"}</h2><button class="pill" id="dlb">⬇ Descargar imagen</button></div>
+    ${note}<p class="note" style="margin:0 0 8px">El número a la izquierda es la posición en la tabla general. Desliza hacia la derecha →</p>${b}`;
 }
 
 function viewTeams() {

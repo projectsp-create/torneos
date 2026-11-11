@@ -76,23 +76,75 @@ export function generalTableHTML(rows, qualIds, byeIds = new Set()) {
       <td class="pts">${r.pts}</td></tr>`).join("")}</tbody></table></div>`;
 }
 
-export function bracketView(resolved, teamsById, c) {
+// Llave gráfica en forma de árbol (octavos → cuartos → semis → final).
+const SHORT = { octavos: "Octavos", cuartos: "Cuartos", semifinal: "Semifinal", tercero: "3.er puesto", final: "Final" };
+export function bracketView(resolved, teamsById, c, opts = {}) {
   const ko = resolved.filter(m => m.phase !== "grupos");
   if (!ko.length) return "";
-  const order = ["octavos", "cuartos", "semifinal", "final"];
-  const cols = order.filter(p => ko.some(m => m.phase === p)).map(p => {
-    let list = ko.filter(m => m.phase === p);
-    if (p === "final") list = list.concat(ko.filter(m => m.phase === "tercero"));
-    return `<div class="col"><h3>${esc(PHASE_LABEL[p])}</h3>${list.map(m => matchCard(m, teamsById, c)).join("")}</div>`;
-  }).join("");
+  const seeds = opts.seeds || {};
+  const byCode = Object.fromEntries(ko.map(m => [m.code, m]));
+  const final = ko.find(m => m.phase === "final");
+  const third = ko.find(m => m.phase === "tercero");
+  if (!final) return "";
+
+  const teamRow = (id, src, side, m) => {
+    const t = id && teamsById[id];
+    const w = winnerSide(m, c);
+    const { h, a } = setsWon(m.sets);
+    const showScore = m.status === "en_juego" || isDone(m);
+    const sd = t && seeds[id] ? `<span class="sd">${seeds[id]}</span>` : `<span class="sd"></span>`;
+    return `<div class="bt ${w === side ? "win" : w ? "lose" : ""}">${sd}<span class="nm ${t ? "" : "tbd"}">${t ? esc(t.name) : esc(sourceLabel(src))}</span>${showScore ? `<b>${side === "home" ? h : a}</b>` : ""}</div>`;
+  };
+  const card = m => {
+    const live = m.status === "en_juego";
+    const sets = (m.sets || []).filter(x => x && (x[0] || x[1])).map(x => `${x[0]}-${x[1]}`).join(" · ");
+    return `<div class="bm ${live ? "live" : ""} ${m.phase === "final" ? "fin" : ""}">
+      <div class="bh"><span>${esc(m.code)} · ${esc(SHORT[m.phase] || "")}</span><span>${live ? '<span class="live-badge">VIVO</span>' : m.scheduled_at ? esc(fmtTime(m.scheduled_at)) : ""}</span></div>
+      ${teamRow(m._home, m.home_source, "home", m)}${teamRow(m._away, m.away_source, "away", m)}
+      ${sets ? `<div class="bs">${esc(sets)}</div>` : ""}</div>`;
+  };
+  const byeCard = id => `<div class="bm bye-card"><div class="bh"><span>Pase directo</span><span></span></div>
+      <div class="bt win"><span class="sd">${seeds[id] || ""}</span><span class="nm">${esc(teamsById[id]?.name || "")}</span></div></div>`;
+  let depth = 0;
+  const node = (m, d) => {
+    depth = Math.max(depth, d);
+    const kid = (id, src) => {
+      if (src && src.startsWith("W:") && byCode[src.slice(2)]) return node(byCode[src.slice(2)], d + 1);
+      if (id && !src && m.phase !== firstPhase) return `<div class="bn leaf">${byeCard(id)}</div>`;
+      return null;
+    };
+    const k1 = kid(m.home_team_id, m.home_source), k2 = kid(m.away_team_id, m.away_source);
+    const kids = k1 || k2 ? `<div class="bk">${k1 || `<div class="bn leaf"></div>`}${k2 || `<div class="bn leaf"></div>`}</div>` : "";
+    return `<div class="bn">${kids}${card(m)}</div>`;
+  };
+  const phases = ["octavos", "cuartos", "semifinal", "final"].filter(p => ko.some(m => m.phase === p));
+  const firstPhase = phases[0];
+  const tree = node(final, 0);
   const pd = podium(resolved, c);
   const nm = id => id && teamsById[id] ? esc(teamsById[id].name) : "Por definir";
-  return `<div class="bracket">${cols}</div>
+  return `<div class="tree-scroll"><div class="tree" id="bracket-img">
+      ${opts.title ? `<div class="tree-title">${esc(opts.title)}</div>` : ""}
+      <div class="tree-heads">${phases.map(p => `<span>${esc(PHASE_LABEL[p])}</span>`).join("")}<span>Campeón</span></div>
+      <div class="tree-body">${tree}<div class="champ"><div class="trophy">🏆</div><div class="lbl">Campeón</div><div class="who">${nm(pd.first)}</div></div></div>
+      ${third ? `<div class="third"><div class="lbl">Partido por el 3.er puesto</div>${card(third)}</div>` : ""}
+    </div></div>
     <div class="podium">
       <div class="p"><div class="medal">🥈</div><div class="lbl">Subcampeón</div><div class="who">${nm(pd.second)}</div></div>
       <div class="p gold"><div class="medal">🏆</div><div class="lbl">Campeón</div><div class="who">${nm(pd.first)}</div></div>
       <div class="p"><div class="medal">🥉</div><div class="lbl">Tercer puesto</div><div class="who">${nm(pd.third)}</div></div>
     </div>`;
+}
+
+// Descarga la llave como imagen PNG (para WhatsApp).
+export async function downloadBracket(name = "llave") {
+  const el = document.getElementById("bracket-img");
+  if (!el) return;
+  const mod = await import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm");
+  const h2c = mod.default || mod;
+  const bg = getComputedStyle(document.body).backgroundColor;
+  const canvas = await h2c(el, { backgroundColor: bg, scale: 2, width: el.scrollWidth, windowWidth: el.scrollWidth + 40 });
+  const a = document.createElement("a");
+  a.download = `${name}.png`; a.href = canvas.toDataURL("image/png"); a.click();
 }
 
 export function toast(msg, kind = "") {

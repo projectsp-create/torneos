@@ -171,3 +171,42 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 30px
 .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
 .seg button { border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+
+/* ---------- Llave en árbol ---------- */
+.tree-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px 10px; -webkit-overflow-scrolling: touch; }
+.tree { --cw: 162px; --gap: 20px; display: inline-block; min-width: 100%; padding: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.tree-title { font-family: "Barlow Condensed", Inter, sans-serif; font-weight: 800; font-size: 22px; text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
+.tree-heads { display: flex; gap: var(--gap); margin-bottom: 6px; }
+.tree-heads span { width: var(--cw); flex: none; text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.tree-body { display: flex; align-items: center; gap: 0; }
+.bn { display: flex; align-items: center; position: relative; }
+.bk { display: flex; flex-direction: column; margin-right: var(--gap); position: relative; }
+.bk > .bn { padding: 5px 0; position: relative; }
+.bk > .bn::after { content: ""; position: absolute; right: calc(var(--gap) / -2); width: calc(var(--gap) / 2); border-right: 2px solid var(--line); }
+.bk > .bn:first-child::after { top: 50%; bottom: 0; border-top: 2px solid var(--line); border-top-right-radius: 8px; }
+.bk > .bn:last-child::after { top: 0; bottom: 50%; border-bottom: 2px solid var(--line); border-bottom-right-radius: 8px; }
+.bk + .bm::before { content: ""; position: absolute; left: calc(var(--gap) / -2); top: 50%; width: calc(var(--gap) / 2); border-top: 2px solid var(--line); }
+.bk > .bn.leaf:empty { height: 84px; }
+.bk > .bn.leaf:empty::after { display: none; }
+.bm { position: relative; width: var(--cw); min-height: 84px; flex: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; display: grid; gap: 2px; align-content: start; }
+.bm.live { border-color: var(--live); }
+.bm.fin { border-color: var(--sun); background: rgba(242,177,52,.12); }
+.bm.bye-card { border-style: dashed; }
+.bh { display: flex; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.bh .live-badge { font-size: 10px; }
+.bt { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; }
+.bt .sd { font-size: 10px; color: var(--muted); font-weight: 700; text-align: center; }
+.bt .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bt .nm.tbd { color: var(--muted); font-style: italic; font-weight: 500; }
+.bt b { font-family: "Barlow Condensed", Inter, sans-serif; font-size: 17px; min-width: 16px; text-align: center; }
+.bt.win { font-weight: 800; }
+.bt.win b { color: var(--brand); }
+.bt.lose { opacity: .55; }
+.bs { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.champ { margin-left: var(--gap); width: var(--cw); flex: none; text-align: center; padding: 14px 8px; border-radius: 12px; border: 2px solid var(--sun); background: rgba(242,177,52,.18); position: relative; }
+.champ::before { content: ""; position: absolute; left: calc(var(--gap) * -1 - 2px); top: 50%; width: var(--gap); border-top: 2px solid var(--sun); }
+.champ .trophy { font-size: 30px; }
+.champ .lbl { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }
+.champ .who { font-family: "Barlow Condensed", Inter, sans-serif; font-weight: 800; font-size: 17px; line-height: 1.1; text-transform: uppercase; }
+.third { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.third .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: .05em; }

@@ -454,7 +454,7 @@ function paneBracket(pane) {
       ${ko.length ? `<p class="note">Los equipos de semifinal y final se llenan solos a medida que registras ganadores.</p>` : ""}
     </section>
   </div>
-  ${ko.length ? `<div class="section-title"><h2>Vista previa</h2></div>${bracketView(resolved, teams, c)}` : ""}
+  ${ko.length ? `<div class="section-title"><h2>Vista previa</h2></div>${bracketView(resolved, teams, c, { seeds: Object.fromEntries(q.map(r => [r.team.id, r.seed])) })}` : ""}
   <div class="section-title"><h2>Tabla general</h2></div>
   <section class="card">${generalTableHTML(generalTable(st), qs, byes)}</section>
   <div class="section-title"><h2>Por grupos</h2></div>
