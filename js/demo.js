@@ -1,7 +1,7 @@
 // Datos de prueba para MODO DEMO (solo si no hay Supabase configurado).
-import * as db from "./data.js";
-import { DEFAULT_CONFIG, generateGroupFixture } from "./logic.js";
-import { TZ_OFFSET } from "./config.js";
+import * as db from "./data.js?v=20261111c";
+import { DEFAULT_CONFIG, generateGroupFixture } from "./logic.js?v=20261111c";
+import { TZ_OFFSET } from "./config.js?v=20261111c";
 
 export const VOLEY_2026_TEAMS = [
   ["GALACTICOS", "A"], ["TEAM ELITE", "A"], ["COLPAI VOLEY", "A"], ["FLEX ZONE", "A"], ["LOS MISMOS", "A"],

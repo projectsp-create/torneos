@@ -1,11 +1,11 @@
-import { SITE_NAME, TZ_OFFSET } from "./config.js";
-import * as db from "./data.js";
+import { SITE_NAME, TZ_OFFSET } from "./config.js?v=20261111c";
+import * as db from "./data.js?v=20261111c";
 import {
   cfg, DEFAULT_CONFIG, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete, setsWon,
   validateSets, generateGroupFixture, generateKnockout, toLocalISO, slugify, PHASE_LABEL, KO_PHASES, winnerSide,
-} from "./logic.js";
-import { esc, fmtDay, fmtTime, money, STATUS_LABEL, bracketView, standingsTable, generalTableHTML, toast, teamName } from "./ui.js";
-import { seedDemoIfEmpty } from "./demo.js";
+} from "./logic.js?v=20261111c";
+import { esc, fmtDay, fmtTime, money, STATUS_LABEL, bracketView, standingsTable, generalTableHTML, toast, teamName } from "./ui.js?v=20261111c";
+import { seedDemoIfEmpty } from "./demo.js?v=20261111c";
 
 const app = document.getElementById("app");
 const GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H"];

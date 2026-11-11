@@ -1,8 +1,8 @@
-import { SITE_NAME, TZ_OFFSET } from "./config.js";
-import * as db from "./data.js";
-import { cfg, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete, generateKnockout } from "./logic.js";
-import { esc, fmtDay, dayKey, matchCard, standingsTable, generalTableHTML, bracketView, downloadBracket, money, STATUS_LABEL } from "./ui.js";
-import { seedDemoIfEmpty } from "./demo.js";
+import { SITE_NAME, TZ_OFFSET } from "./config.js?v=20261111c";
+import * as db from "./data.js?v=20261111c";
+import { cfg, standings, qualifiers, generalTable, byeTeams, resolveTeams, isDone, groupsComplete, generateKnockout } from "./logic.js?v=20261111c";
+import { esc, fmtDay, dayKey, matchCard, standingsTable, generalTableHTML, bracketView, downloadBracket, money, STATUS_LABEL } from "./ui.js?v=20261111c";
+import { seedDemoIfEmpty } from "./demo.js?v=20261111c";
 
 const params = new URLSearchParams(location.search);
 const slug = params.get("t");

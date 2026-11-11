@@ -1,4 +1,4 @@
-import { setsWon, winnerSide, isDone, PHASE_LABEL, sourceLabel, podium } from "./logic.js";
+import { setsWon, winnerSide, isDone, PHASE_LABEL, sourceLabel, podium } from "./logic.js?v=20261111c";
 
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const TZ = "America/Bogota";

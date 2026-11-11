@@ -1,5 +1,5 @@
 // Capa de datos: Supabase en producción, o almacenamiento local en MODO DEMO.
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js?v=20261111c";
 
 export const DEMO = !SUPABASE_URL || !SUPABASE_ANON_KEY;
 let sb = null;
